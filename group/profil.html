@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Client - Mon Profil</title>
+<link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original
+
+" />
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+    /* DEGRADE GRIS FONCE ANTHRACITE (HAUT CONTRASTE) */
+    .gradient-profile {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    }
+    .pattern-overlay {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans pb-20 md:pb-8">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-chart-line w-5 text-gray-500"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-gray-500"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5 text-gray-500"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-plus w-5 text-gray-500"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-file-pdf w-5 text-gray-500"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-user-gear w-5"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide"><img src=https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl height=35 width=75></span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Tableau de bord</a>
+        <a href="historique.html" class="hover:text-blue-200 transition">Historique</a>
+        <a href="virement.html" class="hover:text-blue-200 transition">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="hover:text-blue-200 transition">Mon RIB</a>
+      </nav>
+
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm text-blue-200 font-semibold">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- En-tête de page -->
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Mon Profil & Paramètres</h1>
+      <p class="text-sm text-slate-500">Consultez et vérifiez vos informations personnelles et identifiants sécurisés.</p>
+    </div>
+
+    <!-- ================= CARTE HERO PROFIL EN GRIS FONCÉ (CORRIGÉE) ================= -->
+    <div class="gradient-profile pattern-overlay rounded-2xl p-6 md:p-8 text-white shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+      <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-5 text-center sm:text-left z-10">
+        
+        <!-- Avatar avec fond très clair sur carte sombre pour contraster net -->
+        <div id="hero-user-avatar" class="w-20 h-20 rounded-2xl bg-slate-800/80 border border-slate-600/80 flex items-center justify-center text-2xl font-black text-white shadow-lg">
+          --
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex items-center justify-center sm:justify-start space-x-2">
+            <!-- Nom du titulaire en BLANC PUR -->
+            <h2 id="hero-user-name" class="text-xl md:text-2xl font-black text-white tracking-wide uppercase drop-shadow-sm">Chargement...</h2>
+            <i class="fa-solid fa-circle-check text-sky-400 text-lg" title="Profil vérifié"></i>
+          </div>
+          
+          <!-- Email en gris clair ultra-lisible -->
+          <p id="hero-user-email" class="text-xs md:text-sm text-slate-300 font-semibold tracking-wide">---</p>
+          
+          <!-- Badges de statut retravaillés -->
+          <div class="flex items-center justify-center sm:justify-start space-x-2 pt-2">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-800/90 text-slate-100 border border-slate-600/80 backdrop-blur-md">
+              Compte Particulier
+            </span>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md">
+              Actif
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CARTE CONTENANT LES INFORMATIONS DÉTAILLÉES -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 space-y-6">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#056846] flex items-center justify-center text-lg font-bold border border-blue-100">
+            <i class="fa-solid fa-id-card"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Coordonnées & Domiciliation</h3>
+            <p class="text-xs text-slate-500">Informations rattachées à votre espace client</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRILLE DES 6 CARTES D'INFORMATIONS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Titulaire -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-user text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TITULAIRE</p>
+            <p id="profile-titulaire" class="text-sm font-bold text-slate-800 uppercase mt-0.5">ADMIN GÉRANT</p>
+          </div>
+        </div>
+
+        <!-- Code Client -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-key text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">CODE CLIENT</p>
+            <p id="profile-code-client" class="text-sm font-bold text-slate-800 font-mono tracking-wider mt-0.5">1073368095</p>
+          </div>
+        </div>
+
+        <!-- Téléphone -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-phone text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TÉLÉPHONE</p>
+            <p id="profile-telephone" class="text-sm font-bold text-slate-800 font-mono tracking-wider mt-0.5">06 ** *** **</p>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-envelope text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">EMAIL DE CONTACT</p>
+            <p id="profile-email" class="text-sm font-bold text-slate-800 break-all mt-0.5">admin@banque.com</p>
+          </div>
+        </div>
+
+        <!-- Adresse -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-location-dot text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ADRESSE DE DOMICILIATION</p>
+            <p id="profile-adresse" class="text-sm font-bold text-slate-800 mt-0.5">BNP Paribas - Paris Saint Paul - Le Marais</p>
+          </div>
+        </div>
+
+        <!-- Conseiller -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3 hover:border-slate-200 transition">
+          <div class="w-10 h-10 rounded-lg bg-blue-100/80 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-user-tie text-base"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">CONSEILLER DÉDIÉ</p>
+            <p id="profile-conseiller" class="text-sm font-bold text-slate-800 mt-0.5">Le Gérant</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BLOC D'INFORMATION SÉCURITÉ / MODIFICATION -->
+      <div class="mt-6 p-4 rounded-xl bg-amber-50/80 border border-amber-200/60 flex items-start space-x-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+        <div class="text-xs text-amber-800 leading-relaxed space-y-1">
+          <p class="font-bold">Mise à jour de vos coordonnées</p>
+          <p>
+            Pour toute modification de votre adresse postale, numéro de téléphone ou pièce d'identité, merci de vous adresser à votre conseiller bancaire ou de vous rendre en agence avec un justificatif récent.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 mobile-nav-bottom z-40 flex justify-around py-2 text-slate-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center text-[#056846] font-bold">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & LOGIQUE ================= -->
+  <script>
+    // Config Firebase (v8)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Vérification de la session
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    $(function() {
+      // Écoute en temps réel Firestore
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+
+          const prenom = data.prenom || '';
+          const nom = data.nom || 'GÉRANT';
+          const fullTitulaire = `${prenom} ${nom}`.toUpperCase();
+          const initials = `${prenom[0] || 'A'}${nom[0] || 'G'}`.toUpperCase();
+
+          // Header & Sidebar
+          $('#slide-user-avatar').text(initials);
+          $('#slide-user-name, #nav-user-name').text(`${data.prenom || 'Admin'} ${data.nom || 'Gérant'}`);
+
+          // En-tête Profil Hero
+          $('#hero-user-avatar').text(initials);
+          $('#hero-user-name').text(fullTitulaire);
+          $('#hero-user-email').text(data.email || 'marieannie.cafe@gmail.com');
+
+          // Remplissage des 6 cartes d'informations
+          $('#profile-titulaire').text(data.titulaire || fullTitulaire);
+          $('#profile-code-client').text(data.codeClient || '1950542076');
+          $('#profile-telephone').text(data.telephone || '07 56 85 93 40');
+          $('#profile-email').text(data.email || 'riquetjeanpaul3@gmail.com');
+          $('#profile-adresse').text(data.adresse || '8-10 Rue de Rivoli, 75004 Paris, France');
+          $('#profile-conseiller').text(data.conseiller || 'Le Gérant');
+
+        } else {
+          logout();
+        }
+      });
+    });
+
+    // Navigation Mobile Slide
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    // Déconnexion
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

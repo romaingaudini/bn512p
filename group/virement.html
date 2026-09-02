@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Client - Faire un virement</title>
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original" />
+
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- SDK EmailJS -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+ 
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    }
+    .status-msg {
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20 md:pb-6">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-chart-line w-5 text-gray-500"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-gray-500"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-plus w-5 text-gray-500"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-file-pdf w-5 text-gray-500"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-gear w-5 text-gray-500"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide"><img src=https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl height=35 width=75></span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Tableau de bord</a>
+        <a href="historique.html" class="hover:text-blue-200 transition">Historique</a>
+        <a href="virement.html" class="text-white underline decoration-2 underline-offset-4">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="hover:text-blue-200 transition">Mon RIB</a>
+      </nav>
+
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm hover:text-blue-200">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-3xl mx-auto px-4 py-6">
+
+    <!-- ZONE DE FORMULAIRE CENTRAL -->
+    <section class="content-section bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      
+      <div class="content-title-bar bg-gray-50/50 p-6 border-b border-gray-100">
+        <h2 style="margin:0; font-size:20px; color: #006643;" class="font-bold flex items-center gap-2">
+          Effectuer un Virement 💸
+        </h2>
+        <p style="margin:4px 0 0; color:#64748b; font-size:13px;">
+          Veuillez remplir les informations ci-dessous pour effectuer un virement immédiat ou différé.
+        </p>
+      </div>
+
+      <div class="content-body p-6">
+        
+        <!-- Recap solde disponible -->
+        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+          <div>
+            <p class="text-xs text-blue-800 font-semibold">Solde actuellement disponible</p>
+            <p id="user-iban-display" class="text-xs text-blue-600 font-mono mt-0.5">IBAN: N/A</p>
+          </div>
+          <div class="text-right">
+            <p id="user-balance-display" class="text-xl font-extrabold text-[#056846]">0,00 €</p>
+          </div>
+        </div>
+
+        <div class="transfer-container">
+          <form action="intermediaire.html" method="get">
+
+            <!-- Montant -->
+            <div class="input-group">
+              <label for="montant" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Montant (€) :</label>
+              <input type="number" step="0.01" min="0.01" id="montant" placeholder="0.00" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Date -->
+            <div class="input-group">
+              <label for="date" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Date d'exécution :</label>
+              <input type="date" id="date" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- IBAN -->
+            <div class="input-group full-width md:col-span-2">
+              <label for="iban" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">IBAN Bénéficiaire :</label>
+              <input type="text" id="iban" placeholder="FR76 3000 6000 ..." required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- BIC -->
+            <div class="input-group">
+              <label for="bic" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">BIC Bénéficiaire :</label>
+              <input type="text" id="bic" placeholder="BNPAFRPPXXX" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Domiciliation -->
+            <div class="input-group">
+              <label for="domiciliation" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Domiciliation :</label>
+              <input type="text" id="domiciliation" placeholder="Ex: BNP Paribas Paris" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Expéditeur (Nom) - Champ conservé vide à remplir -->
+            <div class="input-group">
+              <label for="user_name" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Nom et Prénom (Expéditeur) :</label>
+              <input type="text" id="user_name" placeholder="Nom de l'expéditeur" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Expéditeur (Email) - Champ conservé vide à remplir -->
+            <div class="input-group">
+              <label for="user_email" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Email Expéditeur :</label>
+              <input type="email" id="user_email" placeholder="votre.email@exemple.com" required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Motif -->
+            <div class="input-group full-width md:col-span-2">
+              <label for="motif" class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Motif du virement :</label>
+              <input type="text" id="motif" placeholder="Ex: Loyer, Facture, Cadeau..." required class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846]" />
+            </div>
+
+            <!-- Messages d'état -->
+            <div class="md:col-span-2">
+              <div id="transferLoading" class="status-msg" style="color: #006643; background-color: #e6f3ed;" hidden>
+                🔄 Traitement du virement en cours...
+              </div>
+              <div id="transferError" class="status-msg" style="color: #dc2626; background-color: #fef2f2;" hidden>
+                Une erreur est survenue.
+              </div>
+              <div id="transferSuccess" class="status-msg" style="color: #15803d; background-color: #f0fdf4;" hidden>
+                ✅ Virement effectué avec succès. Redirection...
+              </div>
+            </div>
+
+            <!-- Actions du Formulaire -->
+            <div class="form-actions md:col-span-2 pt-2">
+              <button type="submit" id="btnSubmit" class="btn-primary w-full bg-[#056846] hover:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition shadow-md flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-lock text-xs"></i>
+                <span>Valider le Virement</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 mobile-nav-bottom z-40 flex justify-around py-2 text-gray-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center text-[#056846] font-bold">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & EMAILJS ================= -->
+  <script>
+    // Initialisation EmailJS avec la Clé Publique
+    (function() {
+      emailjs.init("0jPbcwuIUNfeT8fNu");
+    })();
+
+    // Config Firebase (v8)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Vérification session
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    let currentUserData = null;
+
+    $(function() {
+      // Date par défaut du jour dans l'input date
+      const today = new Date().toISOString().split('T')[0];
+      $('#date').val(today);
+
+      // Chargement en temps réel des infos de l'utilisateur actif
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          currentUserData = doc.data();
+          const prenom = currentUserData.prenom || '';
+          const nom = currentUserData.nom || '';
+          const fullName = `${prenom} ${nom}`;
+
+          // Navigation & Slide
+          $('#slide-user-avatar').text(`${prenom[0] || 'J'}${nom[0] || 'M'}`.toUpperCase());
+          $('#slide-user-name, #nav-user-name').text(fullName);
+          
+          $('#user-iban-display').text(`IBAN: ${currentUserData.iban || 'FR76 3000 2004 2000 5806 4132 273'}`);
+          
+          const solde = currentUserData.solde !== undefined ? currentUserData.solde : 326500;
+          $('#user-balance-display').text(`${Number(solde).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
+
+          // L'auto-remplissage des champs user_name et user_email a été supprimé afin de laisser les cases vides.
+        } else {
+          logout();
+        }
+      });
+
+      // Soumission du Virement
+      $('#transferForm').on('submit', function(e) {
+        e.preventDefault();
+
+        // Cacher les alertes
+        $('#transferError').prop('hidden', true);
+        $('#transferSuccess').prop('hidden', true);
+        $('#transferLoading').prop('hidden', false);
+        $('#btnSubmit').prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+
+        const montant = parseFloat($('#montant').val());
+        const dateExec = $('#date').val();
+        const iban = $('#iban').val().trim();
+        const bic = $('#bic').val().trim();
+        const domiciliation = $('#domiciliation').val().trim();
+        const userName = $('#user_name').val().trim();
+        const userEmail = $('#user_email').val().trim();
+        const motif = $('#motif').val().trim();
+
+        const soldeActuel = currentUserData.solde !== undefined ? currentUserData.solde : 326500;
+
+        // Contrôle de solde
+        if (montant > soldeActuel) {
+          $('#transferLoading').prop('hidden', true);
+          $('#transferError').text("⚠️ Solde insuffisant pour cette opération.").prop('hidden', false);
+          $('#btnSubmit').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+          return;
+        }
+
+        // Formater la date pour l'historique
+        const formattedDate = dateExec ? new Date(dateExec).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aujourd\'hui';
+
+        // 1. Mise à jour de Firestore
+        const newTransaction = {
+          date: formattedDate,
+          label: `VIREMENT ÉMIS : ${motif} (${iban})`,
+          category: 'Virement émis',
+          montant: -montant
+        };
+
+        const existingTransactions = currentUserData.transactions || [];
+        const updatedTransactions = [newTransaction, ...existingTransactions];
+        const newBalance = soldeActuel - montant;
+
+        db.collection('users').doc(activeUserId).update({
+          solde: newBalance,
+          transactions: updatedTransactions
+        }).then(() => {
+          
+          // 2. Envoi automatique d'email via EmailJS
+          const emailParams = {
+            user_name: userName,
+            user_email: userEmail,
+            montant: montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €',
+            iban: iban,
+            bic: bic,
+            domiciliation: domiciliation,
+            label: motif,
+            date: dateExec,
+            new_balance: newBalance.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €'
+          };
+
+          emailjs.send("service_70s01pw", "template_6ihqz4w", emailParams)
+            .then(function(res) {
+              console.log('EMAILJS SUCCESS!', res.status, res.text);
+            }, function(err) {
+              console.warn('EMAILJS FAILED...', err);
+            });
+
+          // 3. Succès & Redirection
+          $('#transferLoading').prop('hidden', true);
+          $('#transferSuccess').prop('hidden', false);
+
+          setTimeout(() => {
+            window.location.href = "historique.html";
+          }, 2000);
+
+        }).catch((err) => {
+          console.error("Erreur Firestore :", err);
+          $('#transferLoading').prop('hidden', true);
+          $('#transferError').text("Une erreur est survenue lors du traitement du virement.").prop('hidden', false);
+          $('#btnSubmit').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+        });
+
+      });
+    });
+
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="BUILDER_CSRF_TOKEN">
+  <title>Espace Client - Tableau de bord</title>
+  <link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original" />
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20 md:pb-6">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <!-- En-tête du Menu Slide -->
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Navigation du Menu Slide -->
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-chart-line w-5"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-gray-500"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5 text-gray-500"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-plus w-5 text-gray-500"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-file-pdf w-5 text-gray-500"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-gear w-5 text-gray-500"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Pied du Menu Slide (Déconnexion) -->
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      
+      <!-- Logo + Bouton Hamburger Mobile -->
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide"><img src="https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl" height="35" width="75" alt="LCL Logo"></span>
+        </div>
+      </div>
+
+      <!-- Navigation Desktop -->
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="text-white underline decoration-2 underline-offset-4">Tableau de bord</a>
+        <a href="historique.html" class="hover:text-blue-200 transition">Historique</a>
+        <a href="virement.html" class="hover:text-blue-200 transition">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="hover:text-blue-200 transition">Mon RIB</a>
+      </nav>
+
+      <!-- Profil & Déconnexion Desktop -->
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm hover:text-blue-200">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Message de bienvenue mobile -->
+    <div class="md:hidden flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+      <div>
+        <p class="text-xs text-gray-500">Bienvenue,</p>
+        <p id="mobile-user-fullname" class="font-bold text-gray-800">Chargement...</p>
+      </div>
+      <a href="profil.html" class="text-[#056846]">
+        <i class="fa-solid fa-user-gear text-2xl"></i>
+      </a>
+    </div>
+
+    <!-- CARTE PRINCIPALE : SOLDE DU COMPTE ET STATUT DU COMPTE -->
+    <section class="bg-gradient-to-r from-[#056846] to-[#3b82f6] text-white rounded-2xl p-6 shadow-lg">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <!-- AJOUT : ÉTICKET STATUT DU COMPTE -->
+          <div class="mb-3 inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20">
+            <img id="#" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT98g4Q1QGYwXIlqKjsulAjJvwpu0IsiOEHFfreObLw5Ucj9bMgmgXTKc&s=10" alt="Statut Compte" class="w-5 h-5 object-contain rounded-full bg-white p-0.5">
+            <span id="#" class="text-xs font-semibold text-white tracking-wide">Compte Bloqué</span>
+          </div>
+
+          <p class="text-blue-100 text-sm tracking-wide">COMPTE DE DÉPÔT PRINCIPAL</p>
+          <p id="user-iban" class="text-xs text-blue-200 mt-0.5">N° ---</p>
+          <h1 id="user-balance" class="text-3xl md:text-4xl font-extrabold mt-3 tracking-tight">0,00 €</h1>
+          <p class="text-xs text-blue-100 mt-1"><i class="fa-solid fa-circle-check text-blue-300 mr-1"></i> Votre solde actuel</p> <font color=red> <b>Frais de déblocage : 25,000. 00 €</b></font>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-2 md:mt-0">
+          <a href="virement.html" class="bg-white/10 hover:bg-white/20 text-white text-center py-2.5 px-4 rounded-xl text-sm font-semibold backdrop-blur-sm transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Virement</span>
+          </a>
+          <a href="rib.html" class="bg-white/10 hover:bg-white/20 text-white text-center py-2.5 px-4 rounded-xl text-sm font-semibold backdrop-blur-sm transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>RIB</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION DERNIÈRES OPÉRATIONS -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-gray-800 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-[#056846]"></i>
+          Dernières opérations
+        </h2>
+        <a href="historique.html" class="text-xs font-semibold text-[#056846] hover:underline">Voir tout <i class="fa-solid fa-arrow-right ml-1"></i></a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100 text-xs uppercase tracking-wider">
+              <th class="p-3.5">Date</th>
+              <th class="p-3.5">Description</th>
+              <th class="p-3.5">Catégorie</th>
+              <th class="p-3.5 text-right">Montant</th>
+            </tr>
+          </thead>
+          <tbody id="transactions-list" class="divide-y divide-gray-100">
+            <tr>
+              <td colspan="4" class="p-4 text-center text-gray-400 text-xs">Chargement des opérations...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ACCÈS RAPIDES / CARTES DE SERVICES -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+        <div>
+          <div class="w-10 h-10 rounded-full bg-blue-50 text-[#056846] flex items-center justify-center mb-3">
+            <i class="fa-solid fa-user-plus text-lg"></i>
+          </div>
+          <h3 class="font-bold text-gray-800">Bénéficiaires</h3>
+          <p class="text-xs text-gray-500 mt-1">Ajoutez ou gérez vos comptes bénéficiaires pour vos virements.</p>
+        </div>
+        <a href="ajout-beneficiaire.html" class="mt-4 text-xs font-semibold text-[#056846] hover:underline inline-flex items-center">
+          Gérer les bénéficiaires <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i>
+        </a>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+        <div>
+          <div class="w-10 h-10 rounded-full bg-blue-50 text-[#056846] flex items-center justify-center mb-3">
+            <i class="fa-solid fa-credit-card text-lg"></i>
+          </div>
+          <h3 class="font-bold text-gray-800">Mes Cartes</h3>
+          <p class="text-xs text-gray-500 mt-1">Gérez vos plafonds, verrouillez ou déverrouillez votre carte en un clic.</p>
+        </div>
+        <a href="cartes.html" class="mt-4 text-xs font-semibold text-[#056846] hover:underline inline-flex items-center">
+          Voir ma carte <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i>
+        </a>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+        <div>
+          <div class="w-10 h-10 rounded-full bg-blue-50 text-[#056846] flex items-center justify-center mb-3">
+            <i class="fa-solid fa-headset text-lg"></i>
+          </div>
+          <h3 class="font-bold text-gray-800">Service Support</h3>
+          <p class="text-xs text-gray-500 mt-1">Un conseiller est disponible pour répondre à toutes vos interrogations.</p>
+        </div>
+        <button onclick="toggleChat()" class="mt-4 text-xs font-semibold text-[#056846] hover:underline text-left inline-flex items-center">
+          Ouvrir le tchat <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= WIDGET DE CHAT INTEGRÉ ================= -->
+  <div id="chat-popup" class="hidden fixed bottom-20 right-4 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-40 overflow-hidden">
+    <div class="bg-[#056846] text-white p-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-headphones"></i>
+        <span class="font-bold text-sm">Assistance Client</span>
+      </div>
+      <button onclick="toggleChat()" class="text-blue-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="messages-popup" class="p-4 h-64 overflow-y-auto space-y-3 text-xs bg-gray-50"></div>
+    <div class="p-2.5 border-t border-gray-200 bg-white flex items-center space-x-2">
+      <input type="text" id="messageInput-popup" placeholder="Écrivez votre message..." class="w-full px-3 py-2 text-xs bg-gray-100 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#056846]">
+      <button id="sendButton-popup" class="bg-[#056846] text-white p-2 rounded-lg hover:bg-blue-800 transition">
+        <i class="fa-solid fa-paper-plane text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <button onclick="toggleChat()" class="fixed bottom-20 md:bottom-6 right-4 bg-[#056846] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-105 transition">
+    <i class="fa-solid fa-comments text-xl"></i>
+    <span id="notification-bubble" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
+  </button>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 mobile-nav-bottom z-40 flex justify-around py-2 text-gray-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center text-[#056846] font-bold">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & INTERFACE ================= -->
+  <script>
+    // Configuration Firebase (compatibilité v8)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    // Initialisation
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Vérification de la session active -> Redirection vers index.html en cas d'absence de session
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    let isFirstLoad = true;
+
+    // Constantes d'images de statut
+    const IMG_ACTIF = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0G5wClnVXCSbSuyLmn0i4j9si5kFIannvMSePyqZIVw&s=10";
+    const IMG_BLOQUE = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Cadenas-ferme-rouge.svg/960px-Cadenas-ferme-rouge.svg.png";
+
+    $(function() {
+      if (typeof toastr !== 'undefined') {
+        toastr.options = { positionClass: 'toast-top-right', timeOut: 3000 };
+      }
+
+      // Écoute temps réel des données utilisateur
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const user = doc.data();
+          const civilite = user.civilite || 'M./Mme/Mlle';
+          const prenom = user.prenom || '';
+          const nom = user.nom || '';
+          const fullTitleName = `${civilite} ${prenom} ${nom}`;
+          const initials = `${prenom[0] || 'J'}${nom[0] || 'M'}`.toUpperCase();
+
+          // Mise à jour de l'interface utilisateur
+          $('#slide-user-avatar').text(initials);
+          $('#slide-user-name, #nav-user-name').text(`${prenom} ${nom}`);
+          $('#mobile-user-fullname').text(fullTitleName);
+
+          $('#user-iban').text(`N° ${user.iban || 'FR76 3000 4003 2000 5806 4132 273'}`);
+          
+          const formattedBalance = Number(user.solde !== undefined ? user.solde : 36500)
+            .toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          $('#user-balance').text(`${formattedBalance} €`);
+
+          // --- GESTION DU STATUT DU COMPTE (GÉRÉ VIA MANAGE.HTML) ---
+          const currentAccountStatus = user.accountStatus || user.status || 'actif';
+          if (currentAccountStatus === 'bloqué' || currentAccountStatus === 'bloque') {
+            $('#account-status-icon').attr('src', IMG_BLOQUE);
+            $('#account-status-text').text('Compte bloqué');
+          } else {
+            $('#account-status-icon').attr('src', IMG_ACTIF);
+            $('#account-status-text').text('Compte actif');
+          }
+
+          if (isFirstLoad) {
+            if (typeof toastr !== 'undefined') {
+              toastr.success(`Bienvenue ${fullTitleName} sur votre espace client.`);
+            }
+            isFirstLoad = false;
+          }
+
+          // Rendu dynamique de la liste des opérations
+          renderTransactions(user.transactions);
+        } else {
+          logout();
+        }
+      }, (error) => {
+        console.error("Erreur d'écoute Firestore :", error);
+      });
+
+      // Gestion de l'envoi de messages dans le tchat
+      $('#sendButton-popup').on('click', sendMessage);
+      $('#messageInput-popup').on('keypress', function(e) {
+        if (e.which === 13) sendMessage();
+      });
+    });
+
+    function renderTransactions(transactions) {
+      const container = $('#transactions-list');
+      
+      if (transactions && transactions.length > 0) {
+        let html = '';
+        transactions.slice(0, 5).forEach(t => {
+          const isCredit = t.montant > 0;
+          const formattedAmount = Math.abs(t.montant).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          
+          html += `
+            <tr class="hover:bg-gray-50 transition">
+              <td class="p-3.5 text-gray-500 text-xs">${t.date || ''}</td>
+              <td class="p-3.5 font-semibold text-gray-800">${t.label || t.description || 'Opération'}</td>
+              <td class="p-3.5">
+                <span class="${isCredit ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'} text-xs px-2.5 py-1 rounded-full font-medium">
+                  ${t.category || (isCredit ? 'Crédit reçu' : 'Débit')}
+                </span>
+              </td>
+              <td class="p-3.5 text-right font-bold ${isCredit ? 'text-blue-600' : 'text-gray-800'}">
+                ${isCredit ? '+' : '-'} ${formattedAmount} €
+              </td>
+            </tr>
+          `;
+        });
+        container.html(html);
+      } else {
+        container.html(`
+          <tr class="hover:bg-gray-50 transition">
+            <td class="p-3.5 text-gray-500 text-xs">24 Fév 2026</td>
+            <td class="p-3.5 font-semibold text-gray-800">VIREMENT ENTRANT SEPA</td>
+            <td class="p-3.5"><span class="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">Règlement Vente</span></td>
+            <td class="p-3.5 text-right font-bold text-blue-600">+ 36 500,00 €</td>
+          </tr>
+          <tr class="hover:bg-gray-50 transition">
+            <td class="p-3.5 text-gray-500 text-xs">20 Fév 2026</td>
+            <td class="p-3.5 font-semibold text-gray-800">COTISATION CARTE MASTERCARD</td>
+            <td class="p-3.5"><span class="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full font-medium">Frais bancaires</span></td>
+            <td class="p-3.5 text-right font-bold text-gray-800">- 12,50 €</td>
+          </tr>
+        `);
+      }
+    }
+
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    function toggleChat() {
+      $('#chat-popup').toggleClass('hidden');
+    }
+
+    function sendMessage() {
+      const text = $('#messageInput-popup').val().trim();
+      if (!text) return;
+
+      const msgHtml = `
+        <div class="flex justify-end">
+          <div class="bg-[#056846] text-white p-2.5 rounded-xl rounded-tr-none max-w-[80%]">
+            ${text}
+          </div>
+        </div>
+      `;
+      $('#messages-popup').append(msgHtml);
+      $('#messageInput-popup').val('');
+      $('#messages-popup').scrollTop($('#messages-popup')[0].scrollHeight);
+    }
+
+    // Déconnexion dirigée vers index.html
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

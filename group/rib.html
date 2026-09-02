@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Client - Relevé d'Identité Bancaire (RIB)</title>
+<link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original
+
+" />
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- Générateur PDF html2pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .gradient-card {
+      background: linear-gradient(135deg, #044e35 0%, #056846 60%, #0f8a5f 100%);
+    }
+    .pattern-overlay {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans pb-20 md:pb-8">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-chart-line w-5 text-gray-500"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-gray-500"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5 text-gray-500"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-plus w-5 text-gray-500"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-file-pdf w-5"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-gear w-5 text-gray-500"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide"><img src=https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl height=35 width=75></span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Tableau de bord</a>
+        <a href="historique.html" class="hover:text-blue-200 transition">Historique</a>
+        <a href="virement.html" class="hover:text-blue-200 transition">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="text-white underline decoration-2 underline-offset-4">Mon RIB</a>
+      </nav>
+
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm hover:text-blue-200">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- En-tête de section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Relevé d'Identité Bancaire</h1>
+        <p class="text-sm text-slate-500">Téléchargez ou partagez vos coordonnées bancaires en toute sécurité.</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="downloadPDF()" class="flex-1 md:flex-none px-4 py-2.5 bg-[#056846] hover:bg-[#044e35] text-white rounded-xl text-sm font-semibold shadow-sm transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>Télécharger (PDF)</span>
+        </button>
+        <button onclick="window.print()" class="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-sm font-semibold transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-print"></i>
+          <span class="hidden sm:inline">Imprimer</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DOCUMENT RIB PRINCIPAL (IMPRAMABLE / PDF) -->
+    <div id="rib-content" class="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden p-6 md:p-8 space-y-8">
+
+      <!-- EN-TÊTE DU RIB (BANQUE & SÉCURITÉ) -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-6">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 rounded-2xl bg-blue-50 text-[#056846] flex items-center justify-center text-xl font-bold border border-blue-100">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-slate-900 text-lg">BNP PARIBAS</h2>
+            <p class="text-xs font-semibold text-blue-600 flex items-center space-x-1">
+              <i class="fa-solid fa-circle-check"></i>
+              <span>Compte vérifié & certifié</span>
+            </p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+            <i class="fa-solid fa-shield-halved text-blue-600"></i>
+            <span>Document Officiel</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- CARTE BANCAIRE MODERNE / BANDEAU IBAN -->
+      <div class="gradient-card pattern-overlay rounded-2xl p-6 text-white shadow-lg relative overflow-hidden space-y-6">
+        
+        <!-- Haut de carte -->
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs uppercase tracking-widest text-blue-200 font-semibold">Titulaire du compte</p>
+            <p id="rib-titulaire" class="text-lg md:text-xl font-bold uppercase tracking-wide mt-1">
+              MME ROLANDE SANTENS
+            </p>
+          </div>
+          <i class="fa-solid fa-wifi text-2xl text-blue-200/60 rotate-90"></i>
+        </div>
+
+        <!-- Section IBAN avec bouton Copier -->
+        <div class="space-y-2 bg-black/20 backdrop-blur-md p-4 rounded-xl border border-white/10">
+          <div class="flex justify-between items-center">
+            <p class="text-[11px] uppercase tracking-wider text-blue-200 font-bold">Numéro IBAN</p>
+            <button onclick="copyIBAN()" class="text-xs bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-md transition flex items-center space-x-1">
+              <i class="fa-regular fa-copy"></i>
+              <span>Copier</span>
+            </button>
+          </div>
+          <p id="rib-iban" class="text-base sm:text-xl font-mono font-bold tracking-wider text-white break-all">
+            FR76 3000 2003 2000 5806 4132 273
+          </p>
+        </div>
+
+      </div>
+
+      <!-- GRILLE DES INFORMATIONS DÉTAILLÉES -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- BIC / SWIFT -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-code text-base"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Code BIC / SWIFT</p>
+            <p id="rib-bic" class="text-sm font-bold text-slate-800 font-mono mt-0.5">CRLYFRPPXXX</p>
+          </div>
+        </div>
+
+        <!-- NUMÉRO DE COMPTE -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-hashtag text-base"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Numéro de compte</p>
+            <p id="rib-compte-num" class="text-sm font-bold text-slate-800 font-mono mt-0.5">00580641322</p>
+          </div>
+        </div>
+
+        <!-- DOMICILIATION -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-location-dot text-base"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Banque / Domiciliation</p>
+            <p id="rib-domiciliation" class="text-sm font-bold text-slate-800 mt-0.5">BNP Paribas - Paris Saint Paul - Le Marais</p>
+          </div>
+        </div>
+
+        <!-- ADRESSE RATTACHÉE -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-[#056846] flex items-center justify-center flex-shrink-0 font-bold text-sm">
+            <i class="fa-solid fa-house text-base"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Adresse rattachée</p>
+            <p id="rib-adresse" class="text-sm font-bold text-slate-800 mt-0.5">8-10 Rue de Rivoli, 75004 Paris, France</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FOOTER RÉGLEMENTAIRE DU DOCUMENT -->
+      <div class="border-t border-slate-100 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+        <p>Document généré électroniquement par la BNP PARIBAS / Espace Client.</p>
+        <p class="font-mono">RÉF : RIB-2026-OK789</p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 mobile-nav-bottom z-40 flex justify-around py-2 text-slate-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & LOGIQUE ================= -->
+  <script>
+    // Config Firebase (v8)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Vérification de la session
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    $(function() {
+      // Config Toastr
+      toastr.options = {
+        "closeButton": true,
+        "positionClass": "toast-top-right",
+        "timeOut": "3000"
+      };
+
+      // Écoute en temps réel Firestore
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+
+          const prenom = data.prenom || '';
+          const nom = data.nom || '';
+          const titulaireText = data.titulaire || `MME ${prenom} ${nom}`.toUpperCase();
+
+          // Header et Sidebar
+          $('#slide-user-avatar').text(`${prenom[0] || 'R'}${nom[0] || 'S'}`.toUpperCase());
+          $('#slide-user-name, #nav-user-name').text(`${data.prenom || ''} ${data.nom || ''}`);
+
+          // Remplissage des champs RIB
+          $('#rib-titulaire').text(titulaireText);
+          $('#rib-iban').text(data.iban || 'FR76 3000 4003 2000 5806 4132 273');
+          $('#rib-bic').text(data.bic || 'BNPAFRPPXXX');
+          $('#rib-compte-num').text(data.numCompte || '00580641322');
+          $('#rib-domiciliation').text(data.domiciliation || 'BNP Paribas - Paris Saint Paul - Le Marais');
+          $('#rib-adresse').text(data.adresse || '8-10 Rue de Rivoli, 75004 Paris, France');
+
+        } else {
+          logout();
+        }
+      });
+    });
+
+    // Copier l'IBAN
+    function copyIBAN() {
+      const ibanText = $('#rib-iban').text().trim();
+      navigator.clipboard.writeText(ibanText).then(() => {
+        toastr.success("IBAN copié dans le presse-papier !");
+      }).catch(() => {
+        toastr.error("Impossible de copier l'IBAN.");
+      });
+    }
+
+    // Télécharger le RIB en PDF
+    function downloadPDF() {
+      const element = document.getElementById('rib-content');
+      const opt = {
+        margin:       0.3,
+        filename:     'RIB_BNP_Paribas.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      toastr.info("Génération du PDF en cours...");
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // Navigation Mobile
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    // Déconnexion
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

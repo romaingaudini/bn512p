@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Client - Statut d'un transfert</title>
+<link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original
+
+" />
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+  <script>
+    // Après 7 secondes, redirection vers la page d'annulation
+    setTimeout(function() {
+      window.location.href = "annule.html";
+    }, 7000);
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans pb-20 md:pb-8">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-chart-line w-5 text-gray-500"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-clock-rotate-left w-5 text-gray-500"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5 text-gray-500"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-user-plus w-5"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-file-pdf w-5 text-gray-500"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-gear w-5 text-gray-500"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide">Espace Client</span>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Tableau de bord</a>
+        <a href="historique.html" class="hover:text-blue-200 transition">Historique</a>
+        <a href="virement.html" class="hover:text-blue-200 transition">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="hover:text-blue-200 transition">Mon RIB</a>
+      </nav>
+
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm hover:text-blue-200">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+ <main class="flex-1 overflow-y-auto p-4 space-y-4 pb-12">
+        
+        <!-- Logo -->
+        <div class="flex items-center justify-center py-2 bg-white rounded-2xl shadow-sm border border-slate-100">
+            <img src="https://1000logos.net/wp-content/uploads/2020/07/BNP-Paribas-Logo-2000.png" alt="BNP Paribas" class="h-10 object-contain">
+        </div>
+
+     
+        <div class="bg-amber-50 rounded-2xl p-4 border border-amber-200/60 flex items-start space-x-3">
+             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4Gm9mx6fpi0ELWht16CGCGY6W2Ln5Ne_bIw&s" width="50" height="70">
+ 
+        <h4>Votre opération est en cours... <img src="https://cdn.pixabay.com/animation/2023/11/09/03/05/03-05-45-320_512.gif" width="20" height="20"></h4>
+        </div>
+
+    </main>
+
+  </main>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 mobile-nav-bottom z-40 flex justify-around py-2 text-slate-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & LOGIQUE ================= -->
+  <script>
+    // Config Firebase (v8)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Session Utilisateur
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    $(function() {
+      // Config Toastr
+      toastr.options = {
+        "closeButton": true,
+        "positionClass": "toast-top-right",
+        "timeOut": "3000"
+      };
+
+      // Charger l'utilisateur
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          const prenom = data.prenom || 'Client';
+          const nom = data.nom || '';
+          $('#slide-user-avatar').text(`${prenom[0] || 'C'}${nom[0] || ''}`.toUpperCase());
+          $('#slide-user-name, #nav-user-name').text(`${prenom} ${nom}`);
+        } else {
+          logout();
+        }
+      });
+
+      // Écouter les bénéficiaires en temps réel
+      loadBeneficiaries();
+    });
+
+    // Écoute de la sous-collection 'beneficiaires' du document user
+    function loadBeneficiaries() {
+      db.collection('users').doc(activeUserId).collection('beneficiaires').orderBy('createdAt', 'desc')
+        .onSnapshot((snapshot) => {
+          const listContainer = $('#beneficiaries-list');
+          listContainer.empty();
+
+          $('#beneficiary-count').text(`${snapshot.size} enregistré(s)`);
+
+          if (snapshot.empty) {
+            listContainer.html(`
+              <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 space-y-2">
+                <i class="fa-solid fa-folder-open text-3xl"></i>
+                <p class="text-xs font-medium">Aucun bénéficiaire enregistré pour le moment.</p>
+              </div>
+            `);
+            return;
+          }
+
+          snapshot.forEach((doc) => {
+            const ben = doc.data();
+            const id = doc.id;
+            const labelText = ben.label ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${ben.label}</span>` : '';
+
+            const itemHTML = `
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center justify-between hover:border-slate-300 transition">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-[#056846] flex items-center justify-center font-bold flex-shrink-0">
+                    ${(ben.nom || 'B')[0].toUpperCase()}
+                  </div>
+                  <div class="overflow-hidden">
+                    <div class="flex items-center space-x-2">
+                      <p class="font-bold text-slate-800 text-sm truncate">${ben.nom}</p>
+                      ${labelText}
+                    </div>
+                    <p class="text-xs font-mono text-slate-400 truncate mt-0.5">${ben.iban}</p>
+                  </div>
+                </div>
+                <button onclick="deleteBeneficiary('${id}')" class="text-slate-300 hover:text-red-500 p-2 transition" title="Supprimer">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            `;
+            listContainer.append(itemHTML);
+          });
+        }, (error) => {
+          console.error("Erreur de chargement :", error);
+        });
+    }
+
+    // Ajout d'un bénéficiaire
+    function handleSaveBeneficiary(e) {
+      e.preventDefault();
+
+      const name = $('#beneficiary-name').val().trim();
+      const iban = $('#beneficiary-iban').val().trim().toUpperCase();
+      const bic = $('#beneficiary-bic').val().trim().toUpperCase();
+      const label = $('#beneficiary-label').val().trim();
+
+      if (!name || !iban) {
+        toastr.error("Veuillez remplir les champs obligatoires.");
+        return;
+      }
+
+      const submitBtn = $('#submit-btn');
+      submitBtn.prop('disabled', true).addClass('opacity-75').html('<i class="fa-solid fa-spinner fa-spin"></i><span>Enregistrement...</span>');
+
+      db.collection('users').doc(activeUserId).collection('beneficiaires').add({
+        nom: name,
+        iban: iban,
+        bic: bic || 'N/A',
+        label: label || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        toastr.success("Bénéficiaire ajouté avec succès !");
+        $('#add-beneficiary-form')[0].reset();
+      }).catch((err) => {
+        console.error(err);
+        toastr.error("Erreur lors de l'enregistrement.");
+      }).finally(() => {
+        submitBtn.prop('disabled', false).removeClass('opacity-75').html('<i class="fa-solid fa-plus"></i><span>Ajouter le bénéficiaire</span>');
+      });
+    }
+
+    // Supprimer un bénéficiaire
+    function deleteBeneficiary(id) {
+      if (confirm("Voulez-vous vraiment supprimer ce bénéficiaire ?")) {
+        db.collection('users').doc(activeUserId).collection('beneficiaires').doc(id).delete()
+          .then(() => {
+            toastr.info("Bénéficiaire supprimé.");
+          })
+          .catch(() => {
+            toastr.error("Impossible de supprimer le bénéficiaire.");
+          });
+      }
+    }
+
+    // Navigation Mobile Slide
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    // Déconnexion
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

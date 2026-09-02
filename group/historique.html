@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espace Client - Historique des opérations</title>
+  <link rel="shortcut icon" href="https://upload.wikimedia.org/wikipedia/commons/b/b2/BNP_Paribas.png?utm_source=fr.wikipedia.org&utm_campaign=index&utm_content=original" />
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Toastr CSS & JS / jQuery -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <!-- SDK Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    .mobile-nav-bottom {
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans pb-20 md:pb-6">
+
+  <!-- ================= OVERLAY (FOND SOMBRE MENU SLIDE) ================= -->
+  <div id="mobile-menu-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <!-- ================= MENU LATÉRAL SLIDE (MOBILE DRAWER) ================= -->
+  <aside id="mobile-slide-menu" class="fixed top-0 left-0 w-72 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between">
+    <div>
+      <!-- En-tête du Menu Slide -->
+      <div class="bg-[#056846] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="slide-user-avatar" class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold text-white border border-blue-400">
+            --
+          </div>
+          <div>
+            <p id="slide-user-name" class="font-bold text-sm leading-tight">Chargement...</p>
+            <p class="text-[11px] text-blue-200">Espace Privé</p>
+          </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-white hover:text-blue-200 text-xl focus:outline-none p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Navigation du Menu Slide -->
+      <nav class="p-4 space-y-1">
+        <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-chart-line w-5 text-gray-500"></i>
+          <span>Tableau de bord</span>
+        </a>
+        <a href="historique.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl bg-blue-50 text-[#056846] font-semibold text-sm">
+          <i class="fa-solid fa-clock-rotate-left w-5"></i>
+          <span>Historique des opérations</span>
+        </a>
+        <a href="virement.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-arrow-right-arrow-left w-5 text-gray-500"></i>
+          <span>Faire un virement</span>
+        </a>
+        <a href="ajout-beneficiaire.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-plus w-5 text-gray-500"></i>
+          <span>Bénéficiaires</span>
+        </a>
+        <a href="cartes.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-credit-card w-5 text-gray-500"></i>
+          <span>Mes cartes bancaires</span>
+        </a>
+        <a href="rib.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-file-pdf w-5 text-gray-500"></i>
+          <span>Télécharger mon RIB</span>
+        </a>
+
+        <div class="border-t border-gray-100 my-2 pt-2"></div>
+
+        <a href="profil.html" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 font-medium text-sm transition">
+          <i class="fa-solid fa-user-gear w-5 text-gray-500"></i>
+          <span>Paramètres du compte</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Pied du Menu Slide (Déconnexion) -->
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-4 rounded-xl text-sm transition">
+        <i class="fa-solid fa-power-off"></i>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= EN-TÊTE / NAVBAR ================= -->
+  <header class="bg-[#056846] text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      
+      <!-- Logo + Bouton Hamburger Mobile -->
+      <div class="flex items-center space-x-3">
+        <button onclick="toggleMobileMenu()" class="md:hidden text-white text-xl p-1.5 rounded-lg hover:bg-blue-800 focus:outline-none transition">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-building-columns text-xl text-blue-400"></i>
+          <span class="font-bold text-lg tracking-wide"><img src="https://wp.logos-download.com/wp-content/uploads/2016/04/BNP_Paribas_logo_logotype_emblem.png?dl" height="35" width="75"></span>
+        </div>
+      </div>
+
+      <!-- Navigation Desktop -->
+      <nav class="hidden md:flex space-x-6 text-sm font-medium">
+        <a href="dashboard.html" class="hover:text-blue-200 transition">Tableau de bord</a>
+        <a href="historique.html" class="text-white underline decoration-2 underline-offset-4">Historique</a>
+        <a href="virement.html" class="hover:text-blue-200 transition">Virements</a>
+        <a href="cartes.html" class="hover:text-blue-200 transition">Mes Cartes</a>
+        <a href="rib.html" class="hover:text-blue-200 transition">Mon RIB</a>
+      </nav>
+
+      <!-- Profil & Déconnexion Desktop -->
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="profil.html" class="flex items-center space-x-2 text-sm hover:text-blue-200">
+          <i class="fa-solid fa-circle-user text-xl"></i>
+          <span id="nav-user-name">Chargement...</span>
+        </a>
+        <button onclick="logout()" class="text-xs bg-blue-800 hover:bg-blue-900 text-white px-3 py-1.5 rounded-md transition">
+          <i class="fa-solid fa-power-off mr-1"></i> Déconnexion
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= CONTENU PRINCIPAL ================= -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- EN-TÊTE DE LA PAGE -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-[#056846]"></i>
+          Historique des opérations
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Consultez l'ensemble de vos mouvements bancaires</p>
+      </div>
+      
+      <!-- CARTE RECAPITULATIVE RAPIDE -->
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200 flex items-center space-x-6 text-xs">
+        <div>
+          <span class="text-gray-400 block">Total crédits</span>
+          <span id="total-credits" class="font-bold text-blue-600 text-sm">+ 0,00 €</span>
+        </div>
+        <div class="w-px h-8 bg-gray-200"></div>
+        <div>
+          <span class="text-gray-400 block">Total débits</span>
+          <span id="total-debits" class="font-bold text-gray-800 text-sm">- 0,00 €</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOC DES FILTRES ET RECHERCHE -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col md:flex-row justify-between gap-4">
+      
+      <!-- Recherche textuelle -->
+      <div class="relative flex-1">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Rechercher une opération, un libellé, un statut..." 
+          class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#056846]/20 focus:border-[#056846] transition"
+        >
+      </div>
+
+      <!-- Boutons de filtrage par type -->
+      <div class="flex items-center space-x-2 text-xs">
+        <button onclick="setFilter('all')" id="filter-all" class="px-4 py-2 rounded-xl font-semibold bg-[#056846] text-white transition">
+          Toutes
+        </button>
+        <button onclick="setFilter('credit')" id="filter-credit" class="px-4 py-2 rounded-xl font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+          Crédits (+)
+        </button>
+        <button onclick="setFilter('debit')" id="filter-debit" class="px-4 py-2 rounded-xl font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+          Débits (-)
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLEAU DES OPÉRATIONS -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-gray-50 text-gray-500 font-medium border-b border-gray-100 text-xs uppercase tracking-wider">
+              <th class="p-4">Date</th>
+              <th class="p-4">Description</th>
+              <th class="p-4">Catégorie</th>
+              <th class="p-4">Statut</th>
+              <th class="p-4 text-right">Montant</th>
+            </tr>
+          </thead>
+          <tbody id="history-transactions-list" class="divide-y divide-gray-100">
+            <tr>
+              <td colspan="5" class="p-6 text-center text-gray-400 text-xs">Chargement de l'historique...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BARRE DE NAVIGATION MOBILE (BOTTOM) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 mobile-nav-bottom z-40 flex justify-around py-2 text-gray-500 text-[10px]">
+    <a href="dashboard.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-chart-line text-lg mb-0.5"></i>
+      <span>Accueil</span>
+    </a>
+    <a href="historique.html" class="flex flex-col items-center text-[#056846] font-bold">
+      <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+      <span>Historique</span>
+    </a>
+    <a href="virement.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-arrow-right-arrow-left text-lg mb-0.5"></i>
+      <span>Virement</span>
+    </a>
+    <a href="cartes.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+      <span>Cartes</span>
+    </a>
+    <a href="profil.html" class="flex flex-col items-center hover:text-[#056846]">
+      <i class="fa-solid fa-user text-lg mb-0.5"></i>
+      <span>Profil</span>
+    </a>
+  </nav>
+
+  <!-- ================= SCRIPTS FIREBASE V8 & INTERFACE ================= -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMBGGXNwEHk4gCwzsofxVYIH0dJ6usyek",
+      authDomain: "alliance-67cb1.firebaseapp.com",
+      projectId: "alliance-67cb1",
+      storageBucket: "alliance-67cb1.firebasestorage.app",
+      messagingSenderId: "464968433664",
+      appId: "1:464968433664:web:0604cbdaf2b36e55e718e5"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // Vérification de la session active
+    const activeUserId = sessionStorage.getItem('activeUserId');
+    if (!activeUserId) {
+      window.location.href = "index.html";
+    }
+
+    let rawTransactions = [];
+    let currentFilter = 'all';
+
+    $(function() {
+      // Chargement en temps réel des données
+      db.collection('users').doc(activeUserId).onSnapshot((doc) => {
+        if (doc.exists) {
+          const user = doc.data();
+          const prenom = user.prenom || 'Julie';
+          const nom = user.nom || 'Mazuir';
+
+          $('#slide-user-avatar').text(`${prenom[0] || 'J'}${nom[0] || 'M'}`.toUpperCase());
+          $('#slide-user-name, #nav-user-name').text(`${prenom} ${nom}`);
+
+          // Stockage local des transactions
+          rawTransactions = user.transactions || getFallbackTransactions();
+          updateTotals(rawTransactions);
+          applyFilterAndSearch();
+        } else {
+          logout();
+        }
+      }, (error) => {
+        console.error("Erreur Firestore :", error);
+      });
+
+      // Écouteur du champ de recherche
+      $('#searchInput').on('keyup input', applyFilterAndSearch);
+    });
+
+    // Helper pour générer le badge du statut
+    function getStatusBadgeHtml(statusStr) {
+      const status = (statusStr || 'Exécuté').toLowerCase();
+      
+      if (status.includes('en attente') || status.includes('en cours') || status.includes('pending')) {
+        return `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-[11px] px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                  <i class="fa-solid fa-spinner fa-spin text-[10px]"></i> En attente
+                </span>`;
+      } else if (status.includes('rejet') || status.includes('annul') || status.includes('échec')) {
+        return `<span class="bg-red-50 text-red-700 border border-red-200 text-[11px] px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                  <i class="fa-solid fa-circle-xmark text-[10px]"></i> Rejeté
+                </span>`;
+      } else {
+        return `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                  <i class="fa-solid fa-circle-check text-[10px]"></i> Exécuté
+                </span>`;
+      }
+    }
+
+    // Rendu dynamique de la liste
+    function renderHistory(transactions) {
+      const container = $('#history-transactions-list');
+
+      if (!transactions || transactions.length === 0) {
+        container.html(`
+          <tr>
+            <td colspan="5" class="p-8 text-center text-gray-400 text-xs">
+              <i class="fa-solid fa-folder-open text-2xl mb-2 block text-gray-300"></i>
+              Aucune opération ne correspond à vos critères.
+            </td>
+          </tr>
+        `);
+        return;
+      }
+
+      let html = '';
+      transactions.forEach(t => {
+        const isCredit = t.montant > 0;
+        const formattedAmount = Math.abs(t.montant).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const statusBadge = getStatusBadgeHtml(t.status || t.statut);
+
+        html += `
+          <tr class="hover:bg-gray-50 transition">
+            <td class="p-4 text-gray-500 text-xs whitespace-nowrap">${t.date || ''}</td>
+            <td class="p-4 font-semibold text-gray-800">${t.label || t.description || 'Opération'}</td>
+            <td class="p-4">
+              <span class="${isCredit ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'} text-xs px-2.5 py-1 rounded-full font-medium">
+                ${t.category || (isCredit ? 'Crédit reçu' : 'Débit')}
+              </span>
+            </td>
+            <td class="p-4 whitespace-nowrap">
+              ${statusBadge}
+            </td>
+            <td class="p-4 text-right font-bold whitespace-nowrap ${isCredit ? 'text-blue-600' : 'text-gray-800'}">
+              ${isCredit ? '+' : '-'} ${formattedAmount} €
+            </td>
+          </tr>
+        `;
+      });
+
+      container.html(html);
+    }
+
+    // Filtrage et recherche synchronisés
+    function applyFilterAndSearch() {
+      const searchVal = $('#searchInput').val().toLowerCase().trim();
+
+      const filtered = rawTransactions.filter(t => {
+        const matchesType = 
+          currentFilter === 'all' ? true :
+          currentFilter === 'credit' ? t.montant > 0 :
+          t.montant < 0;
+
+        const label = (t.label || t.description || '').toLowerCase();
+        const category = (t.category || '').toLowerCase();
+        const status = (t.status || t.statut || 'exécuté').toLowerCase();
+        
+        const matchesSearch = label.includes(searchVal) || category.includes(searchVal) || status.includes(searchVal);
+
+        return matchesType && matchesSearch;
+      });
+
+      renderHistory(filtered);
+    }
+
+    function setFilter(filterType) {
+      currentFilter = filterType;
+
+      // Style dynamique des boutons
+      ['all', 'credit', 'debit'].forEach(type => {
+        const btn = $(`#filter-${type}`);
+        if (type === filterType) {
+          btn.removeClass('bg-gray-100 text-gray-600 hover:bg-gray-200').addClass('bg-[#056846] text-white');
+        } else {
+          btn.removeClass('bg-[#056846] text-white').addClass('bg-gray-100 text-gray-600 hover:bg-gray-200');
+        }
+      });
+
+      applyFilterAndSearch();
+    }
+
+    // Calcul des totaux récapitulatifs
+    function updateTotals(transactions) {
+      let sumCredit = 0;
+      let sumDebit = 0;
+
+      transactions.forEach(t => {
+        if (t.montant > 0) sumCredit += t.montant;
+        else sumDebit += Math.abs(t.montant);
+      });
+
+      $('#total-credits').text(`+ ${sumCredit.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
+      $('#total-debits').text(`- ${sumDebit.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
+    }
+
+    // Données de secours par défaut avec champ statut
+    function getFallbackTransactions() {
+      return [
+        { date: '24 Fév 2026', label: 'VIREMENT ENTRANT SEPA', category: 'Crédit reçu', montant: 36500, statut: 'Exécuté' },
+        { date: '20 Fév 2026', label: 'COTISATION CARTE MASTERCARD', category: 'Frais bancaires', montant: -12.50, statut: 'Exécuté' },
+        { date: '15 Fév 2026', label: 'ACHAT COMMERCE CARREFOUR', category: 'Achats', montant: -84.30, statut: 'Exécuté' },
+        { date: '10 Fév 2026', label: 'VIREMENT INTERNE EPARGNE', category: 'Virement', montant: -500.00, statut: 'En attente' },
+        { date: '01 Fév 2026', label: 'REMBOURSEMENT ASSURANCE', category: 'Crédit reçu', montant: 145.00, statut: 'Exécuté' }
+      ];
+    }
+
+    function toggleMobileMenu() {
+      const menu = $('#mobile-slide-menu');
+      const overlay = $('#mobile-menu-overlay');
+
+      if (menu.hasClass('-translate-x-full')) {
+        menu.removeClass('-translate-x-full').addClass('translate-x-0');
+        overlay.removeClass('hidden');
+        setTimeout(() => overlay.removeClass('opacity-0').addClass('opacity-100'), 10);
+      } else {
+        menu.removeClass('translate-x-0').addClass('-translate-x-full');
+        overlay.removeClass('opacity-100').addClass('opacity-0');
+        setTimeout(() => overlay.addClass('hidden'), 300);
+      }
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
